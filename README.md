@@ -2,7 +2,25 @@
 config for plex, deluge behind PIA VPN, sonarr, radarr, and datadog...all running in docker
 
 ## quickstart
-1) install ansible and use it to get containers running:
+1) setup your credentials:
+    - PIA VPN username and password: `/opt/ansible/pia_vars.yml`
+        ```
+        pia:
+          username: <username>
+          password: <password>
+        ```
+    - PIA proxy settings for deluge: `/opt/ansible/deluge_vars.yml`
+    
+        ```
+        deluge:
+          proxy:
+            username: <username>
+            password: <password>
+            hostname: proxy-nl.privateinternetaccess.com
+            port: 1080
+        ```
+
+2) install ansible and use it to get containers running:
     ```
     wget https://github.com/conlon/mediaserver/blob/master/setup.sh
     chmod +x setup.sh
