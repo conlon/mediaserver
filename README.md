@@ -22,7 +22,7 @@ config for plex, deluge behind PIA VPN, sonarr, radarr, and datadog...all runnin
 
 2) install ansible and use it to get containers running:
     ```
-    wget https://github.com/conlon/mediaserver/blob/master/setup.sh
+    wget https://raw.githubusercontent.com/conlon/mediaserver/master/setup.sh
     chmod +x setup.sh
     ./setup.sh
     ```
