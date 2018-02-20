@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+  vars_files:
+    - /opt/ansible/pia_vars.yml
+    - /opt/ansible/deluge_vars.yml
+  roles:
+    - geerlingguy.docker
+    - geerlingguy.pip
+    #- disk
+    - docker
+    - datadog
+    - pia
+    - deluge
+    - plex
+    - pushbullet
+    - dropbox
+    - sonarr
+    - radarr

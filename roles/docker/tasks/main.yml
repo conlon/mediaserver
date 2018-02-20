@@ -1,0 +1,4 @@
+- name: install docker module dependencies
+  pip:
+    name: docker-py
+    state: present

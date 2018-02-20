@@ -1,0 +1,4 @@
+deluge:
+  downloads_path: "/root/Downloads/"
+  completed_path: "/root/Downloads/"
+  vars_file: /opt/ansible/deluge_vars.yml

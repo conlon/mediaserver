@@ -1,0 +1,44 @@
+- name: make sure dirs exist
+  file:
+    path: "{{ item }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    state: directory
+  with_items:
+    - /mnt/deluge/config
+    - /mnt/deluge/downloads
+
+- name: load vars from disk
+  include_vars: "{{ deluge.vars_file }}"
+
+- name: set up configs
+  template:
+    src: core.conf.j2
+    dest: /mnt/deluge/config/core.conf
+
+
+- name: get the docker image
+  docker_image:
+    name: linuxserver/deluge
+  become: yes
+
+- name: run the container
+  docker_container:
+    name: deluge
+    image: linuxserver/deluge:latest
+    # network_mode: host
+    networks:
+      - name: "pia_network"
+    purge_networks: true
+    ports:
+      - 8112:8112
+    volumes:
+      - /mnt/deluge/config:/config
+      - /mnt/deluge/downloads:/downloads
+    env:
+      TZ: "America/Chicago"
+      PUID: "{{ ansible_user_uid }}"
+      PGID: "{{ ansible_user_gid }}"
+      # UMASK_SET: 022
+    restart_policy: always
+  become: yes

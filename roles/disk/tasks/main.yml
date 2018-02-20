@@ -1,0 +1,28 @@
+- name: install docker module dependencies
+  pip:
+    name: jmespath
+
+- name: get plex_mount_device
+  set_fact:
+    plex_mount_device: "{{ ansible_mounts | json_query('[?mount == `/mnt/plex`] | [0].device') }}"
+
+- name: check/create disk partition
+  parted:
+    device: "{{ plex_mount_device | regex_replace('[0-9]$', '') }}"
+    number: 1
+    state: present
+  become: yes
+
+- filesystem:
+    fstype: ext4
+    dev: "{{ plex_mount_device }}"
+  become: yes
+
+- name: mount library
+  mount:
+    path: /mnt/plex
+    src: UUID=189ddb79-9882-40ae-9ad3-e802621189d6
+    fstype: ext4
+    opts: defaults,nofail
+    state: mounted
+  become: yes

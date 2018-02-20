@@ -1,0 +1,2 @@
+pia:
+  vars_file: /opt/ansible/pia_vars.yml
