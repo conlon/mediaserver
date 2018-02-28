@@ -1,18 +1,42 @@
 ---
 - hosts: localhost
   vars_files:
-    - /opt/ansible/pia_vars.yml
     - /opt/ansible/deluge_vars.yml
+    - /opt/ansible/pushbullet_vars.yml
+    - /opt/ansible/datadog_vars.yml
+
+  pre_tasks:
+    - name: make sure dirs exist
+      file:
+        path: "{{ item }}"
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        state: directory
+      with_items:
+        - /mnt/plex/config
+        - /mnt/plex/transcode
+        - /mnt/sonarr/config
+        - /mnt/radarr/config
+      become: yes
+
+    - name: install some packages
+      apt:
+        name: "{{ item }}"
+      with_items:
+        - htop
+        - portmap # rpcbind?
+        - nfs-common
+
   roles:
     - geerlingguy.docker
     - geerlingguy.pip
     #- disk
     - docker
     - datadog
-    - pia
     - deluge
-    - plex
-    - pushbullet
-    - dropbox
-    - sonarr
-    - radarr
+
+  post_tasks:
+    - name: create docker-compose.yml
+      template:
+        src: docker-compose.yml.j2
+        dest: ./docker-compose.yml

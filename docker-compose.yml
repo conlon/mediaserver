@@ -1,0 +1,124 @@
+version: '3'
+
+networks:
+  vpn:
+
+services:
+  pia:
+    container_name: pia
+    image: conlon/pia-openvpn:latest
+    command: --auth-user-pass auth.conf
+    cap_add:
+      - net_admin
+    devices:
+      - /dev/net/tun
+    dns:
+      - 209.222.18.222
+      - 209.222.18.218
+    volumes:
+      - "${PIA_AUTH_CONF}:/etc/openvpn/auth.conf:Z"
+    networks:
+      - vpn
+    ports:
+      - 8112:8112
+    environment:
+      REGION: "${PIA_REGION}"
+      STRONG_ENCRYPT: "${PIA_STRONG_ENCRYPT}"
+      LOCAL_NETWORK: "${PIA_LOCAL_NETWORK_CIDR}"
+    restart: unless-stopped
+
+  deluge:
+    container_name: deluge
+    image: linuxserver/deluge:latest
+    depends_on:
+      - pia
+    network_mode: "container:pia"
+    volumes:
+      - "${DELUGE_CONFIG}:/config"
+      - "${DELUGE_DOWNLOADS}:/downloads"
+      - "${DELUGE_MEDIA}:/media"
+  #    stdin_open: true
+  #    tty: true
+    environment:
+      TZ: "${TIMEZONE}"
+      PUID: "${PID}"
+      GUID: "${GID}"
+    restart: unless-stopped
+ 
+  nginx:
+    container_name: nginx
+    image: dperson/nginx:latest
+    ports:
+      - 80:80
+      - 443:443
+    command: -w "http://deluge:8112;/deluge" -n "localhost"
+    restart: unless-stopped
+
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker:latest
+    network_mode: host
+    volumes:
+      - "${PLEX_CONFIG}:/config"
+      - "${PLEX_TRANSCODE}:/transcode"
+      - "${PLEX_MEDIA}:/data"
+    environment:
+      TZ: "${TIMEZONE}"
+      PLEX_CLAIM: "CLAIM-DHH3JAHCM2TFBZPDRWTN"
+      HOSTNAME: "${PLEX_HOSTNAME}"
+      PLEX_UID: "${PID}"
+      PLEX_GID: "${GID}"
+    restart: unless-stopped
+
+################################################################
+#        EXTRAS
+################################################################
+  sonarr:
+    container_name: sonarr
+    image: linuxserver/sonarr:latest
+    network_mode: host
+    volumes:
+      #- /etc/localtime:/etc/localtime:ro # either this or TZ env var is required
+      - "${SONARR_CONFIG}:/config"
+      - "${DELUGE_DOWNLOADS}:/downloads"
+      - "${SONARR_COMPLETED}:/completed"
+    environment:
+      TZ: "${TIMEZONE}"
+      PUID: "${PID}"
+      GUID: "${GID}"
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
+  radarr:
+    container_name: radarr
+    image: linuxserver/radarr:latest
+    network_mode: host
+    volumes:
+      #- /etc/localtime:/etc/localtime:ro # either this or TZ env var is required
+      - "${RADARR_CONFIG}:/config"
+      - "${DELUGE_DOWNLOADS}:/downloads"
+      - "${RADARR_COMPLETED}:/completed"
+    environment:
+      TZ: "${TIMEZONE}"
+      PUID: "${PID}"
+      GUID: "${GID}"
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+
+  datadog:
+    container_name: datadog
+    image: datadog/docker-dd-agent:latest
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /opt/datadog/conf.d:/conf.d:ro
+    environment:
+      API_KEY: "${DATADOG_API_KEY}"
+      SD_BACKEND: docker
+      NON_LOCAL_TRAFFIC: "false"
+      DD_PROCESS_AGENT_ENABLED: "true"
+    restart: unless-stopped

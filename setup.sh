@@ -10,3 +10,5 @@ sudo apt-get install -y  ansible
 git clone https://github.com/conlon/mediaserver
 
 ansible-playbook mediaserver/main.yml -i mediaserver/inventories/localhost.inv -K
+
+sudo docker-compose up -d

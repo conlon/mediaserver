@@ -1,0 +1,123 @@
+version: '3'
+
+networks:
+  vpn:
+
+services:
+  pia:
+    container_name: pia
+    image: conlon/pia-openvpn:latest
+    command: --auth-user-pass auth.conf
+    cap_add:
+      - net_admin
+    devices:
+      - /dev/net/tun
+    dns:
+      - 209.222.18.222
+      - 209.222.18.218
+    volumes:
+      - '/mnt/pia/auth.conf:/etc/openvpn/auth.conf:Z'
+    networks:
+      - vpn
+    ports:
+      - 8112:8112
+    environment:
+      REGION: 'US Texas'
+      STRONG_ENCRYPT: "true"
+      LOCAL_NETWORK: "10.0.0.0/27"
+    restart: unless-stopped
+
+  deluge:
+    container_name: deluge
+    image: linuxserver/deluge:latest
+    depends_on:
+      - pia
+    network_mode: "container:pia"
+    volumes:
+      - /mnt/deluge/config:/config
+      - /mnt/media:/media
+  #    stdin_open: true
+  #    tty: true
+    environment:
+      TZ: "America/Chicago"
+      PUID: "1000"
+      PGID: "1000"
+    restart: unless-stopped
+ 
+  nginx:
+    container_name: nginx
+    image: dperson/nginx:latest
+    ports:
+      - 80:80
+      - 443:443
+    command: -w "http://deluge:8112;/deluge" -n "localhost"
+    restart: unless-stopped
+
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker:latest
+    network_mode: host
+    volumes:
+      - /mnt/plex/config:/config
+      - /mnt/plex/transcode:/transcode
+      - /mnt/media:/data
+    environment:
+      TZ: "America/Chicago"
+      PLEX_CLAIM: "CLAIM-DHH3JAHCM2TFBZPDRWTN"
+      HOSTNAME: "hal"
+      PLEX_UID: "1000"
+      PLEX_GID: "1000"
+    restart: unless-stopped
+
+################################################################
+#        EXTRAS
+################################################################
+  sonarr:
+    container_name: sonarr
+    image: linuxserver/sonarr:latest
+    network_mode: host
+    volumes:
+      #- /etc/localtime:/etc/localtime:ro # either this or TZ env var is required
+      - /mnt/sonarr:/config
+      - /mnt/deluge/downloads:/downloads
+      - /mnt/media/tv:/completed
+    environment:
+      TZ: "America/Chicago"
+      PUID: "1000"
+      GUID: "1000"
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+
+  radarr:
+    container_name: radarr
+    image: linuxserver/radarr:latest
+    network_mode: host
+    volumes:
+      #- /etc/localtime:/etc/localtime:ro # either this or TZ env var is required
+      - /mnt/radarr/config:/config
+      - /mnt/deluge/downloads:/downloads
+      - /mnt/media/movies:/completed
+    environment:
+      TZ: "America/Chicago"
+      PUID: "1000"
+      GUID: "1000"
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+
+  datadog:
+    container_name: datadog
+    image: datadog/docker-dd-agent:latest
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /opt/datadog/conf.d:/conf.d:ro
+    environment:
+      API_KEY: "58a2524183e441339a33128937f7636e"
+      SD_BACKEND: docker
+      NON_LOCAL_TRAFFIC: "false"
+      DD_PROCESS_AGENT_ENABLED: "true"
+    restart: unless-stopped

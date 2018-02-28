@@ -1,20 +1,16 @@
-- name: get the datadog docker image
-  docker_image:
-    name: datadog/docker-dd-agent
+- name: create dir for checks
+  file:
+    state: directory
+    path: "{{ item }}"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  with_items:
+    - /opt/datadog/conf.d/
   become: yes
 
-- name: run the datadog container
-  docker_container:
-    name: datadog
-    image: datadog/docker-dd-agent:latest
-    network_mode: host
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /proc/:/host/proc/:ro
-      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
-    env:
-      API_KEY: "{{ datadog.api_key }}"
-      SD_BACKEND: docker
-      NON_LOCAL_TRAFFIC: false
-    restart_policy: always 
-  become: yes
+- name: setup checks
+  template:
+    src: "{{ item }}.yaml"
+    dest: /opt/datadog/conf.d/{{ item }}.yaml
+  with_items:
+    - docker_daemon

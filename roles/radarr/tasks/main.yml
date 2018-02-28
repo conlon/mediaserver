@@ -7,27 +7,3 @@
   with_items:
     - /mnt/radarr/config
   become: yes
-
-- name: get the radarr docker image
-  docker_image:
-    name: linuxserver/radarr
-  become: yes
-
-- name: run the radarr container
-  docker_container:
-    name: radarr
-    image: linuxserver/radarr:latest
-    network_mode: host
-    volumes:
-      #- /etc/localtime:/etc/localtime:ro # either this or TZ env var is required
-      - /mnt/radarr/config:/config
-      - /mnt/plex/media/movies:/movies
-      - /mnt/deluge/downloads:/downloads
-    env:
-      TZ: "America/Chicago"
-      PUID: "{{ ansible_user_uid }}"
-      GUID: "{{ ansible_user_gid }}"
-    ports:
-      - 7878:7878
-    restart_policy: always
-  become: yes
