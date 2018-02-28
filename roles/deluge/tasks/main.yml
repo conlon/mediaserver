@@ -11,9 +11,21 @@
 - name: load vars from disk
   include_vars: "{{ deluge.vars_file }}"
 
-- name: set up configs
+- name: set up core configs
   template:
     src: core.conf.j2
     dest: /mnt/deluge/config/core.conf
 
+- name: configure notifications
+  template:
+    src: "{{ item }}.j2"
+    dest: /mnt/deluge/config/{{ item }}
+    mode: 0755
+  with_items:
+    - execute_completed.sh
+    - execute_added.sh
 
+- name: setup execute plugin configs
+  template:
+    src: execute.conf.j2
+    dest: /mnt/deluge/config/execute.conf

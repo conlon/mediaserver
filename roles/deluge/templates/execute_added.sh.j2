@@ -1,0 +1,17 @@
+#!/bin/bash
+torrentid=$1
+torrentname=$2
+torrentpath=$3
+
+body="$torrentid $torrentname"
+
+curl --header 'Access-Token: {{ pushbullet.access_token }}' \
+    --header 'Content-Type: application/json' \
+    --data-binary \
+"{
+  \"title\":\"torrent added\",
+  \"body\":\"$body\",
+  \"type\":\"note\",
+  \"channel_tag\":\"{{ pushbullet.channel_tag }}\"
+}" \
+    --request POST https://api.pushbullet.com/v2/pushes
