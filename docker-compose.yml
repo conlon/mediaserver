@@ -107,6 +107,21 @@ services:
       - 7878:7878
     restart: unless-stopped
 
+  jackett:
+    container_name: jackett
+    image: linuxserver/jackett:latest
+    network_mode: host
+    volumes:
+      - "${JACKETT_CONFIG}:/config"
+      - "${JACKETT_BLACKHOLE}:/downloads"
+    environment:
+      TZ: "${TIMEZONE}"
+      PUID: "${PID}"
+      GUID: "${GID}"
+    ports:
+      - 9117:9117
+    restart: unless-stopped
+
   datadog:
     container_name: datadog
     image: datadog/docker-dd-agent:latest
