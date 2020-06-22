@@ -1,4 +1,4 @@
-version: '3'
+version: '2.2'
 
 networks:
   vpn:
@@ -21,6 +21,11 @@ services:
       - vpn
     ports:
       - 8112:8112
+      #- 58846:58846
+    logging:
+      options:
+        max-size: "200m"
+        max-file: "10"
     environment:
       REGION: "${PIA_REGION}"
       STRONG_ENCRYPT: "${PIA_STRONG_ENCRYPT}"
@@ -30,19 +35,25 @@ services:
   deluge:
     container_name: deluge
     image: linuxserver/deluge:latest
+  #  image: linuxserver/deluge:136
+  #  command: -L warning
     depends_on:
       - pia
     network_mode: "container:pia"
+    #network_mode: "service:pia"
     volumes:
       - "${DELUGE_CONFIG}:/config"
-      - "${DELUGE_MEDIA}/downloading:/downloading"
       - "${MEDIA_ROOT}:/media"
-  #    stdin_open: true
-  #    tty: true
+    logging:
+      options:
+        max-size: "200m"
+        max-file: "10"
     environment:
       TZ: "${TIMEZONE}"
       PUID: "${PID}"
       GUID: "${GID}"
+    #cpus: 1.5
+    cpu_percent: 75 #only v2, and v3 only supports swarm limits :(
     restart: unless-stopped
  
   nginx:
@@ -50,29 +61,25 @@ services:
     image: dperson/nginx:latest
     ports:
       - 80:80
-      - 443:443
     command: -w "http://deluge:8112;/deluge" -n "localhost"
     restart: unless-stopped
 
-  plex:
-    container_name: plex
-    image: plexinc/pms-docker:latest
-    network_mode: host
-    volumes:
-      - "${PLEX_CONFIG}:/config"
-      - "${PLEX_TRANSCODE}:/transcode"
-      - "${MEDIA_ROOT}:/data"
-    environment:
-      TZ: "${TIMEZONE}"
-      PLEX_CLAIM: "CLAIM-DHH3JAHCM2TFBZPDRWTN"
-      HOSTNAME: "${PLEX_HOSTNAME}"
-      PLEX_UID: "${PID}"
-      PLEX_GID: "${GID}"
-    restart: unless-stopped
+#  plex:
+#    container_name: plex
+#    image: plexinc/pms-docker:latest
+#    network_mode: host
+#    volumes:
+#      - "${PLEX_CONFIG}:/config"
+#      - "${PLEX_TRANSCODE}:/transcode"
+#      - "${MEDIA_ROOT}:/data"
+#    environment:
+#      TZ: "${TIMEZONE}"
+#      PLEX_CLAIM: "${PLEX_CLAIM}"
+#      HOSTNAME: "${PLEX_HOSTNAME}"
+#      PLEX_UID: "${PID}"
+#      PLEX_GID: "${GID}"
+#    restart: unless-stopped
 
-################################################################
-#        EXTRAS
-################################################################
   sonarr:
     container_name: sonarr
     image: linuxserver/sonarr:latest
@@ -80,7 +87,6 @@ services:
     volumes:
       #- /etc/localtime:/etc/localtime:ro # either this or TZ env var is required
       - "${SONARR_CONFIG}:/config"
-      - "${DELUGE_DOWNLOADS}:/downloading"
       - "${MEDIA_ROOT}:/media"
     environment:
       TZ: "${TIMEZONE}"
@@ -88,6 +94,12 @@ services:
       GUID: "${GID}"
     ports:
       - 8989:8989
+      - 8988:8988
+    logging:
+      options:
+        max-size: "200m"
+        max-file: "10"
+    cpu_percent: 50
     restart: unless-stopped
 
   radarr:
@@ -97,7 +109,6 @@ services:
     volumes:
       #- /etc/localtime:/etc/localtime:ro # either this or TZ env var is required
       - "${RADARR_CONFIG}:/config"
-      - "${DELUGE_DOWNLOADS}:/downloading"
       - "${MEDIA_ROOT}:/media"
     environment:
       TZ: "${TIMEZONE}"
@@ -105,6 +116,12 @@ services:
       GUID: "${GID}"
     ports:
       - 7878:7878
+      - 7877:7877
+    logging:
+      options:
+        max-size: "200m"
+        max-file: "10"
+    cpu_percent: 50
     restart: unless-stopped
 
   jackett:
@@ -120,6 +137,10 @@ services:
       GUID: "${GID}"
     ports:
       - 9117:9117
+    logging:
+      options:
+        max-size: "200m"
+        max-file: "10"
     restart: unless-stopped
 
   datadog:
@@ -131,9 +152,44 @@ services:
       - /proc/:/host/proc/:ro
       - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
       - /opt/datadog/conf.d:/conf.d:ro
+    logging:
+      options:
+        max-size: "200m"
+        max-file: "10"
     environment:
       API_KEY: "${DATADOG_API_KEY}"
       SD_BACKEND: docker
       NON_LOCAL_TRAFFIC: "false"
       DD_PROCESS_AGENT_ENABLED: "true"
     restart: unless-stopped
+
+  sync:
+    container_name: sync
+    image: resilio/sync
+    restart: always
+    environment:
+      PUID: "${PID}"
+      GUID: "${GID}"
+    ports:
+      - 9999:8888 # web ui
+      - 55555:55555/tcp
+      - 55555:55555/udp
+    volumes:
+      #- sync_storage:/mnt/sync/storage     # Sync storage folder
+      #- ./sync.conf:/mnt/sync/sync.conf    # Configuration file
+      #- $SYNC_DATA:/mnt/sync/data          # folder with data to be shared
+      - "${SYNC_STORAGE}:/mnt/sync"         # Sync storage folder
+      #- "${SYNC_CONF}:/mnt/sync/sync.conf"  # Configuration file
+      - "${MEDIA_ROOT}/${MUSIC_DIR_1}:/mnt/mounted_folders/${MUSIC_DIR_1}"
+      - "${MEDIA_ROOT}/${MUSIC_DIR_2}:/mnt/mounted_folders/${MUSIC_DIR_2}"
+
+#  cadvisor:
+#    container_name: cadvisor
+#    image: google/cadvisor:latest
+#    volumes:
+#      - /:/rootfs:ro
+#      - /var/run:/var/run:rw
+#      - /sys:/sys:ro
+#      - /var/lib/docker/:/var/lib/docker:ro
+#    ports:
+#      - 8080:8080
